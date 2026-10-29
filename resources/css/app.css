@@ -6,6 +6,175 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    --color-ink-950: #060911;
+    --color-ink-900: #0a0f1c;
+    --color-ink-800: #111827;
+    --color-ink-700: #1a2338;
+
+    --color-brand-300: #a5b4fc;
+    --color-brand-400: #818cf8;
+    --color-brand-500: #6366f1;
+    --color-brand-600: #4f46e5;
+
+    --color-accent-300: #fcd34d;
+    --color-accent-400: #fbbf24;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 5.5rem;
+    }
+
+    body {
+        @apply bg-ink-950 text-slate-200;
+        background-image:
+            radial-gradient(70rem 40rem at 15% -10%, rgb(99 102 241 / 0.16), transparent 60%),
+            radial-gradient(50rem 30rem at 90% 0%, rgb(217 70 239 / 0.1), transparent 55%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+
+    ::selection {
+        background-color: rgb(99 102 241 / 0.4);
+        color: #ffffff;
+    }
+}
+
+@layer components {
+    .container-page {
+        @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .nav-link {
+        @apply rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white;
+    }
+
+    .nav-link-active {
+        @apply bg-white/10 text-white shadow-sm;
+    }
+
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none;
+    }
+
+    .btn-sm {
+        @apply rounded-lg px-3 py-1.5 text-xs;
+    }
+
+    .btn-primary {
+        @apply bg-brand-500 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-600;
+    }
+
+    .btn-ghost {
+        @apply border border-white/10 bg-white/5 text-slate-200 hover:border-white/20 hover:bg-white/10;
+    }
+
+    .btn-danger {
+        @apply border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20;
+    }
+
+    .card {
+        @apply rounded-2xl border border-white/10 bg-ink-900/70 shadow-xl shadow-black/20 backdrop-blur-sm;
+    }
+
+    .badge {
+        @apply inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300;
+    }
+
+    .badge-rating {
+        @apply border-accent-400/30 bg-accent-400/10 font-mono text-accent-300;
+    }
+
+    .poster {
+        @apply relative overflow-hidden bg-linear-to-br;
+    }
+
+    .poster-1 {
+        @apply from-indigo-500/45 via-indigo-900/40 to-ink-950;
+    }
+
+    .poster-2 {
+        @apply from-emerald-500/40 via-emerald-900/40 to-ink-950;
+    }
+
+    .poster-3 {
+        @apply from-rose-500/40 via-rose-900/35 to-ink-950;
+    }
+
+    .poster-4 {
+        @apply from-amber-500/35 via-amber-900/35 to-ink-950;
+    }
+
+    .poster-5 {
+        @apply from-sky-500/40 via-sky-900/40 to-ink-950;
+    }
+
+    .poster-6 {
+        @apply from-fuchsia-500/40 via-fuchsia-900/35 to-ink-950;
+    }
+
+    .field-label {
+        @apply mb-1.5 block text-sm font-medium text-slate-300;
+    }
+
+    .field-input {
+        @apply w-full rounded-xl border border-white/10 bg-ink-950/70 px-3.5 py-2.5 text-sm text-slate-100 shadow-inner shadow-black/10 transition placeholder:text-slate-500 focus:border-brand-400 focus:bg-ink-950 focus:ring-2 focus:ring-brand-500/25 focus:outline-none;
+    }
+
+    .field-input-error {
+        @apply border-rose-500/60 focus:border-rose-400 focus:ring-rose-500/20;
+    }
+
+    .field-help {
+        @apply mt-1.5 text-xs text-slate-500;
+    }
+
+    .field-error {
+        @apply mt-1.5 flex items-start gap-1 text-xs font-medium text-rose-400;
+    }
+
+    .hero {
+        @apply relative overflow-hidden rounded-3xl border border-white/10 bg-ink-900/60;
+        background-image:
+            radial-gradient(38rem 22rem at 12% -20%, rgb(99 102 241 / 0.35), transparent 65%),
+            radial-gradient(26rem 18rem at 95% 10%, rgb(217 70 239 / 0.22), transparent 60%),
+            linear-gradient(180deg, rgb(17 24 39 / 0.85), rgb(6 9 17 / 0.6));
+    }
+
+    .stat {
+        @apply rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-sm;
+    }
+
+    .fade-up {
+        animation: fade-up 0.45s ease-out both;
+    }
+}
+
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
