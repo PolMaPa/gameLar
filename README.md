@@ -40,7 +40,7 @@ Extensiones PHP necesarias: `openssl`, `pdo`, `pdo_sqlite`, `sqlite3`, `mbstring
 
 ```powershell
 # 1. Clona el repositorio
-git clone https://github.com/TU-USUARIO/TU-REPOSITORIO.git
+git clone https://github.com/PolMaPa/gameLar.git
 cd gameLar
 
 # 2. Instala dependencias, crea .env, genera la clave,
