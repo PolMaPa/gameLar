@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# El workflow solo necesita leer el código: no puede escribir en el repositorio.
+permissions:
+  contents: read
+
+# Si se empuja varias veces seguidas a la misma rama, cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_VERSION: '8.2'
+  NODE_VERSION: '22'
+  APP_ENV: testing
+  APP_DEBUG: 'true'
+
+jobs:
+  tests:
+    name: Pruebas y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_sqlite, sqlite3, openssl, tokenizer, xml, ctype, fileinfo, curl, dom
+          coverage: none
+          tools: composer:v2
+
+      - name: Mostrar versiones
+        run: |
+          php --version
+          composer --version
+          node --version
+          npm --version
+
+      - name: Obtener la carpeta de caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cachear dependencias de Composer
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ env.PHP_VERSION }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ env.PHP_VERSION }}-composer-
+
+      - name: Instalar dependencias de PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar el entorno de pruebas
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Crear y migrar la base de datos de pruebas
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force --seed
+          php artisan migrate:status
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar dependencias de Node
+        run: npm ci
+
+      - name: Compilar los assets
+        run: npm run build
+
+      - name: Comprobar el estilo del código
+        run: vendor/bin/pint --test
+
+      - name: Ejecutar la suite de pruebas
+        run: php artisan test
+
+      - name: Publicar el resumen
+        if: always()
+        run: |
+          {
+            echo "## Resultado de CI"
+            echo ""
+            echo "| Dato | Valor |"
+            echo "|---|---|"
+            echo "| Estado | **${{ job.status }}** |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Rama | \`${{ github.ref_name }}\` |"
+            echo "| PHP | ${{ env.PHP_VERSION }} |"
+            echo "| Node.js | ${{ env.NODE_VERSION }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
