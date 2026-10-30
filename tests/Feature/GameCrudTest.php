@@ -3,12 +3,25 @@
 namespace Tests\Feature;
 
 use App\Models\Game;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class GameCrudTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Autentica al usuario para acceder a las rutas de gestión.
+     */
+    private function actingAsUser(): User
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        return $user;
+    }
 
     /**
      * @param  array<string, mixed>  $overrides
@@ -44,8 +57,53 @@ class GameCrudTest extends TestCase
             ->assertSee('Todavía no hay videojuegos');
     }
 
+    public function test_guests_do_not_see_management_actions_in_the_catalogue(): void
+    {
+        $game = Game::factory()->create(['name' => 'Celeste']);
+
+        $this->get(route('games.index'))
+            ->assertOk()
+            ->assertDontSee(route('games.create'), false)
+            ->assertDontSee(route('games.edit', $game), false);
+
+        $this->get(route('games.show', $game))
+            ->assertOk()
+            ->assertDontSee(route('games.edit', $game), false);
+    }
+
+    public function test_authenticated_users_see_management_actions_in_the_catalogue(): void
+    {
+        $this->actingAsUser();
+
+        $game = Game::factory()->create(['name' => 'Celeste']);
+
+        $this->get(route('games.index'))
+            ->assertOk()
+            ->assertSee(route('games.create'), false)
+            ->assertSee(route('games.edit', $game), false);
+
+        $this->get(route('games.show', $game))
+            ->assertOk()
+            ->assertSee(route('games.edit', $game), false);
+    }
+
+    public function test_guests_are_redirected_to_login_for_management_routes(): void
+    {
+        $game = Game::factory()->create();
+
+        $this->get(route('games.create'))->assertRedirect(route('login'));
+        $this->get(route('games.edit', $game))->assertRedirect(route('login'));
+        $this->post(route('games.store'), $this->validPayload())->assertRedirect(route('login'));
+        $this->put(route('games.update', $game), $this->validPayload())->assertRedirect(route('login'));
+        $this->delete(route('games.destroy', $game))->assertRedirect(route('login'));
+
+        $this->assertDatabaseCount('games', 1);
+    }
+
     public function test_create_form_is_accessible_and_includes_csrf_protection(): void
     {
+        $this->actingAsUser();
+
         $this->get(route('games.create'))
             ->assertOk()
             ->assertSee('name="_token"', false)
@@ -54,6 +112,8 @@ class GameCrudTest extends TestCase
 
     public function test_store_creates_a_game(): void
     {
+        $this->actingAsUser();
+
         $response = $this->post(route('games.store'), $this->validPayload());
 
         $response->assertRedirect(route('games.show', Game::firstOrFail()))
@@ -68,6 +128,8 @@ class GameCrudTest extends TestCase
 
     public function test_store_converts_empty_optional_fields_to_null(): void
     {
+        $this->actingAsUser();
+
         $this->post(route('games.store'), $this->validPayload([
             'release_date' => '',
             'rating' => '',
@@ -83,6 +145,8 @@ class GameCrudTest extends TestCase
 
     public function test_store_rejects_invalid_data(): void
     {
+        $this->actingAsUser();
+
         $this->from(route('games.create'))
             ->post(route('games.store'), [
                 'name' => '',
@@ -118,6 +182,8 @@ class GameCrudTest extends TestCase
 
     public function test_edit_form_uses_put_method_and_csrf(): void
     {
+        $this->actingAsUser();
+
         $game = Game::factory()->create(['name' => 'Portal 2']);
 
         $this->get(route('games.edit', $game))
@@ -130,6 +196,8 @@ class GameCrudTest extends TestCase
 
     public function test_update_modifies_a_game(): void
     {
+        $this->actingAsUser();
+
         $game = Game::factory()->create(['name' => 'Viejo nombre', 'rating' => 5]);
 
         $this->put(route('games.update', $game), $this->validPayload([
@@ -146,6 +214,8 @@ class GameCrudTest extends TestCase
 
     public function test_update_rejects_invalid_data(): void
     {
+        $this->actingAsUser();
+
         $game = Game::factory()->create(['name' => 'Intacto']);
 
         $this->from(route('games.edit', $game))
@@ -158,6 +228,8 @@ class GameCrudTest extends TestCase
 
     public function test_destroy_deletes_a_game(): void
     {
+        $this->actingAsUser();
+
         $game = Game::factory()->create(['name' => 'Borrame']);
 
         $this->delete(route('games.destroy', $game))
@@ -169,11 +241,15 @@ class GameCrudTest extends TestCase
 
     public function test_destroy_returns_404_for_a_missing_game(): void
     {
+        $this->actingAsUser();
+
         $this->delete('/games/999999')->assertNotFound();
     }
 
     public function test_store_accepts_the_rating_boundaries(): void
     {
+        $this->actingAsUser();
+
         $this->post(route('games.store'), $this->validPayload(['name' => 'Nota cero', 'rating' => '0']))
             ->assertRedirect();
 
@@ -186,6 +262,8 @@ class GameCrudTest extends TestCase
 
     public function test_store_rejects_ratings_outside_the_allowed_range(): void
     {
+        $this->actingAsUser();
+
         foreach (['10.1', '-0.1', '99', 'abc'] as $index => $rating) {
             $this->from(route('games.create'))
                 ->post(route('games.store'), $this->validPayload([
@@ -201,6 +279,8 @@ class GameCrudTest extends TestCase
 
     public function test_update_rejects_ratings_outside_the_allowed_range(): void
     {
+        $this->actingAsUser();
+
         $game = Game::factory()->create(['rating' => 5]);
 
         $this->from(route('games.edit', $game))

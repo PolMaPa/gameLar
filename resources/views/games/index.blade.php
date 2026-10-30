@@ -15,9 +15,11 @@
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <a href="#catalogo" class="btn btn-primary">Ver catálogo</a>
-                <a href="{{ route('games.create') }}" class="btn btn-ghost">
-                    <span aria-hidden="true">+</span> Añadir videojuego
-                </a>
+                @auth
+                    <a href="{{ route('games.create') }}" class="btn btn-ghost">
+                        <span aria-hidden="true">+</span> Añadir videojuego
+                    </a>
+                @endauth
             </div>
         </div>
 
@@ -99,9 +101,11 @@
                 </p>
             </div>
 
-            <a href="{{ route('games.create') }}" class="btn btn-ghost btn-sm">
-                <span aria-hidden="true">+</span> Nuevo juego
-            </a>
+            @auth
+                <a href="{{ route('games.create') }}" class="btn btn-ghost btn-sm">
+                    <span aria-hidden="true">+</span> Nuevo juego
+                </a>
+            @endauth
         </div>
 
         @if ($games->isEmpty())
@@ -112,7 +116,11 @@
                 </x-empty-state>
             @else
                 <x-empty-state>
-                    <a href="{{ route('games.create') }}" class="btn btn-primary">Añadir el primero</a>
+                    @auth
+                        <a href="{{ route('games.create') }}" class="btn btn-primary">Añadir el primero</a>
+                    @else
+                        <a href="{{ route('login') }}" class="btn btn-primary">Iniciar sesión para añadir juegos</a>
+                    @endauth
                 </x-empty-state>
             @endif
         @else

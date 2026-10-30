@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PHP_VERSION: '8.2'
+  PHP_VERSION: '8.4'
   NODE_VERSION: '22'
   APP_ENV: testing
   APP_DEBUG: 'true'
@@ -38,7 +38,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
-          extensions: mbstring, pdo_sqlite, sqlite3, openssl, tokenizer, xml, ctype, fileinfo, curl, dom
+          extensions: mbstring, pdo_sqlite, sqlite3, pdo_mysql, openssl, tokenizer, xml, ctype, fileinfo, curl, dom
           coverage: none
           tools: composer:v2
 
@@ -107,3 +107,62 @@ jobs:
             echo "| PHP | ${{ env.PHP_VERSION }} |"
             echo "| Node.js | ${{ env.NODE_VERSION }} |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  mysql:
+    name: Compatibilidad MySQL 8.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: gamehub_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: gamehub_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, openssl, tokenizer, xml, ctype, fileinfo, curl, dom
+          coverage: none
+          tools: composer:v2
+
+      - name: Instalar dependencias de PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar el entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Migrar y sembrar sobre MySQL
+        run: |
+          php artisan migrate --force
+          php artisan db:seed --force
+          php artisan db:seed --force
+          php artisan migrate:status
+
+      - name: Comprobar los datos sembrados
+        run: |
+          php artisan tinker --execute="if (App\Models\Game::count() !== 12 || App\Models\User::count() !== 1) { throw new RuntimeException('Seed inesperado: se esperaban 12 juegos y 1 usuario.'); }"

@@ -11,7 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Tras iniciar sesión, los usuarios vuelven al catálogo.
+        $middleware->redirectUsersTo('/games');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -58,16 +58,19 @@
             </dl>
 
             <div class="mt-auto flex flex-wrap items-center gap-3 border-t border-white/5 pt-6">
-                <a href="{{ route('games.edit', $game) }}" class="btn btn-primary">Editar</a>
+                @auth
+                    <a href="{{ route('games.edit', $game) }}" class="btn btn-primary">Editar</a>
 
-                <form action="{{ route('games.destroy', $game) }}" method="POST"
-                      onsubmit="return confirm('¿Eliminar este videojuego?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                </form>
+                    <form action="{{ route('games.destroy', $game) }}" method="POST"
+                          onsubmit="return confirm('¿Eliminar este videojuego?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </form>
+                @endauth
 
-                <a href="{{ route('games.index') }}" class="btn btn-ghost sm:ml-auto">
+                <a href="{{ route('games.index') }}"
+                   class="btn btn-ghost {{ auth()->check() ? 'sm:ml-auto' : 'ml-auto' }}">
                     <span aria-hidden="true">←</span> Volver al catálogo
                 </a>
             </div>

@@ -32,11 +32,33 @@
                    @if (request()->routeIs('games.index', 'games.show')) aria-current="page" @endif>
                     Catálogo
                 </a>
-                <a href="{{ route('games.create') }}" class="btn btn-primary btn-sm sm:px-4 sm:py-2.5 {{ request()->routeIs('games.create') ? 'ring-2 ring-white/30' : '' }}">
-                    <span aria-hidden="true">+</span>
-                    <span class="sm:hidden">Nuevo</span>
-                    <span class="hidden sm:inline">Nuevo juego</span>
-                </a>
+
+                @auth
+                    <a href="{{ route('games.create') }}" class="btn btn-primary btn-sm sm:px-4 sm:py-2.5 {{ request()->routeIs('games.create') ? 'ring-2 ring-white/30' : '' }}">
+                        <span aria-hidden="true">+</span>
+                        <span class="sm:hidden">Nuevo</span>
+                        <span class="hidden sm:inline">Nuevo juego</span>
+                    </a>
+
+                    <span class="hidden max-w-32 truncate text-sm text-slate-400 sm:inline"
+                          title="{{ auth()->user()->email }}">
+                        {{ auth()->user()->name }}
+                    </span>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost btn-sm">Salir</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}"
+                       class="nav-link {{ request()->routeIs('login') ? 'nav-link-active' : '' }}"
+                       @if (request()->routeIs('login')) aria-current="page" @endif>
+                        Entrar
+                    </a>
+                    <a href="{{ route('register') }}" class="btn btn-primary btn-sm sm:px-4 sm:py-2.5">
+                        Crear cuenta
+                    </a>
+                @endauth
             </nav>
         </div>
     </header>
@@ -52,7 +74,7 @@
     <footer class="border-t border-white/5 py-6">
         <div class="container-page flex flex-col items-center justify-between gap-2 text-xs text-slate-500 sm:flex-row">
             <p>© {{ date('Y') }} {{ config('app.name', 'gameLar') }} · Catálogo de videojuegos</p>
-            <p>Laravel {{ app()->version() }} · SQLite</p>
+            <p>Laravel {{ app()->version() }}</p>
         </div>
     </footer>
 </body>
