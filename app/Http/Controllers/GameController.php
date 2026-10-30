@@ -26,7 +26,7 @@ class GameController extends Controller
             ->when($filters['genre'] ?? null, fn ($query, $genre) => $query->where('genre', $genre))
             ->when($filters['platform'] ?? null, fn ($query, $platform) => $query->where('platform', $platform))
             ->orderBy('name')
-            ->paginate(9)
+            ->paginate(12)
             ->withQueryString();
 
         $hasFilters = collect($filters)->contains(fn ($value) => filled($value));
