@@ -1,71 +1,87 @@
 # GameHub · Catálogo de videojuegos
 
-Aplicación web construida con **Laravel 12**, **Blade**, **Tailwind CSS 4** y autenticación propia basada en Breeze para gestionar un catálogo de videojuegos: alta, consulta, edición y eliminación, con búsqueda, filtros, paginación y validación en servidor.
+Aplicación web educativa construida con **Laravel 12**, **Blade** y **Tailwind CSS 4** para consultar y administrar un catálogo de videojuegos. Incluye Docker (Nginx + PHP-FPM + MySQL 8.4), integración continua con GitHub Actions y la base para el despliegue automático en un VPS Ubuntu por SSH.
 
-En local usa **SQLite**; en producción está preparada para **Laravel Cloud + Laravel MySQL** (SQLite no es válido allí porque el filesystem es efímero).
-
-> El nombre visible se toma de `APP_NAME`. En `.env.example` aparece como `gameLar`; si quieres que muestre **GameHub**, cámbialo en tu `.env` a `APP_NAME=GameHub` y ejecuta `php artisan config:clear`.
+> Ejercicio de clase. El objetivo es demostrar el ciclo completo: desarrollo Laravel, contenedores, repositorio, CI y CD.
 
 ---
 
 ## Funcionalidades
 
-- CRUD completo de videojuegos (nombre, descripción, género, plataforma, fecha, valoración e imagen).
-- Catálogo público: listado y detalle visibles sin iniciar sesión.
-- **Login y registro** de usuarios; crear, editar y eliminar requiere sesión.
-- Catálogo ordenado alfabéticamente y paginado (9 por página).
-- Búsqueda por nombre y filtros por género y plataforma mediante query string (`GET`).
-- Los filtros se conservan al cambiar de página.
-- Valoraciones restringidas a **0–10**, validadas en el formulario y también en el modelo.
-- Mensajes de éxito y resumen de errores de validación.
-- Estado vacío y estado «sin resultados».
-- Diseño responsive con componentes Blade reutilizables.
-- Todas las salidas dinámicas escapadas con `{{ }}` (sin `{!! !!}`).
+- **Página de inicio** con presentación, estadísticas y juegos mejor valorados.
+- **Catálogo público** en tarjetas con nombre, descripción, género, plataforma, fecha, valoración e imagen.
+- **Búsqueda por nombre** y **filtros por género y plataforma**, combinables y conservados al paginar.
+- **Página de detalle** de cada videojuego.
+- **Login** y registro de usuarios.
+- **Rol de administrador**: solo las cuentas con `is_admin` pueden gestionar el catálogo.
+- **Panel de administración** en `/admin` con métricas, búsqueda y tabla de gestión.
+- **Formularios de creación y edición** con validación en servidor.
+- **Confirmación de eliminación** en el detalle, las tarjetas y el panel.
+- Valoraciones restringidas a **0–10**, validadas en el formulario y en el modelo.
+- Mensajes de éxito, errores de validación y estados vacíos.
+- Diseño responsive, accesible y sin dependencias de servicios privados.
+
+---
+
+## Tecnologías
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Laravel 12.70 · PHP 8.4 |
+| Vistas | Blade + Tailwind CSS 4 |
+| Base de datos | MySQL 8.4 (Docker) · SQLite (desarrollo sin Docker y tests) |
+| Servidor web | Nginx |
+| PHP | PHP-FPM 8.4 |
+| Contenedores | Docker + Docker Compose |
+| Frontend build | Node.js 22 + Vite 7 |
+| CI/CD | GitHub Actions |
+| Producción | Ubuntu Server + Docker Compose + SSH |
 
 ---
 
 ## Requisitos
 
-| Herramienta | Versión |
-|---|---|
-| PHP | 8.2 o superior (producción: 8.4) |
-| Composer | 2.x |
-| Node.js | 20.19+ o 22.12+ |
-| npm | 10 o superior |
-| Base de datos local | SQLite (incluida en PHP) |
-| Base de datos en producción | Laravel MySQL |
+**Con Docker (recomendado):**
 
-Extensiones PHP necesarias en local: `openssl`, `pdo`, `pdo_sqlite`, `sqlite3`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`.
+- Docker Engine 24+ con Compose v2 (Docker Desktop en Windows 11 con WSL 2).
+- Puertos libres: `8080` (desarrollo) y opcionalmente `8081` para probar producción en local.
 
-> En XAMPP, `pdo_sqlite` y `sqlite3` suelen venir activadas. Comprueba con `php -m`.
+**Sin Docker:**
+
+- PHP 8.2+ con `pdo_sqlite`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `fileinfo`.
+- Composer 2.x.
+- Node.js 20.19+ o 22.12+ y npm.
 
 ---
 
-## Instalación
+## Inicio rápido con Docker
 
 ```powershell
-# 1. Clona el repositorio
-git clone https://github.com/PolMaPa/gameLar.git
-cd gameLar
+# 1. Crear el entorno local (no se versiona)
+Copy-Item .env.docker.example .env.docker
 
-# 2. Instala dependencias, crea .env, genera la clave,
-#    crea la base SQLite, migra y compila los assets
-composer run setup
+# 2. Rellenar en .env.docker: APP_KEY, DB_PASSWORD y DB_ROOT_PASSWORD
+php artisan key:generate --show
 
-# 3. Carga los datos de ejemplo (12 videojuegos y un usuario de prueba)
-php artisan db:seed
+# 3. Construir y arrancar Nginx, PHP-FPM y MySQL
+docker compose --env-file .env.docker up -d --build
+
+# 4. Sembrar el catálogo y la cuenta administradora
+docker compose --env-file .env.docker exec app php artisan db:seed --force
 ```
 
-`composer run setup` ejecuta por ti:
+- Aplicación: <http://localhost:8080>
+- Catálogo: <http://localhost:8080/games>
+- Panel: <http://localhost:8080/admin>
+- Salud: <http://localhost:8080/up>
 
-1. `composer install`
-2. copia `.env.example` a `.env` si no existe
-3. `php artisan key:generate`
-4. `php artisan migrate --force` (crea `database/database.sqlite` si falta)
-5. `npm install`
-6. `npm run build`
+> `--env-file .env.docker` es obligatorio. Sin él, Compose leería el `.env` de Laravel (SQLite).
 
-### Instalación manual (equivalente)
+Guía completa de Docker, persistencia, seguridad y solución de problemas: **[`docs/DOCKER.md`](docs/DOCKER.md)**.
+
+---
+
+## Inicio rápido sin Docker (SQLite)
 
 ```powershell
 composer install
@@ -74,35 +90,45 @@ php artisan key:generate
 php artisan migrate --seed
 npm install
 npm run build
-```
-
-### Usuario de prueba (solo local)
-
-`DatabaseSeeder` crea en entornos que no son producción:
-
-| Correo | Contraseña |
-|---|---|
-| `test@example.com` | `password` |
-
-En producción **no** se crea este usuario: solo se siembran los 12 juegos demo.
-
----
-
-## Ejecutar el proyecto
-
-```powershell
 php artisan serve
 ```
 
-Abre **http://127.0.0.1:8000**. La raíz `/` redirige a `/games`.
+Abre <http://127.0.0.1:8000>.
 
-Para desarrollo con recarga de CSS/JS en caliente:
+`composer run setup` automatiza los pasos anteriores.
+
+---
+
+## Cuentas y roles
+
+### Administrador local
+
+El seeder `AdminUserSeeder` crea (o promociona) una cuenta administradora de forma **idempotente**:
+
+| Entorno | Correo | Contraseña |
+|---|---|---|
+| Local / testing | `admin@gamehub.test` | `password` |
+| Producción | `ADMIN_EMAIL` | `ADMIN_PASSWORD` o una aleatoria generada por el seeder |
+
+- En **producción no hay contraseñas escritas en el repositorio**. Si `ADMIN_PASSWORD` está vacío, el seeder genera una contraseña aleatoria y la muestra **una sola vez** por consola.
+- La cuenta antigua `test@example.com` / `password` sigue existiendo en bases de datos ya sembradas y se usa para comprobar que **un usuario normal no puede administrar**.
+
+### Crear o promocionar un administrador
 
 ```powershell
-composer run dev
+# Pide la contraseña de forma oculta (no queda en el historial)
+php artisan gamehub:admin admin@example.com --name="Admin GameHub"
 ```
 
-> `composer run dev` levanta el servidor, el worker de colas y Vite a la vez.
+Si el correo ya existe, solo activa `is_admin`; no cambia la contraseña ni duplica la cuenta.
+
+### Variables de entorno
+
+```ini
+ADMIN_NAME="Administrador GameHub"
+ADMIN_EMAIL=admin@tu-dominio.example
+# ADMIN_PASSWORD=una-contraseña-larga
+```
 
 ---
 
@@ -110,128 +136,151 @@ composer run dev
 
 | Método | Ruta | Acción | Acceso |
 |---|---|---|---|
-| `GET` | `/` | Redirige a `/games` | Público |
+| `GET` | `/` | Página de inicio | Público |
 | `GET` | `/games` | Catálogo con búsqueda, filtros y paginación | Público |
 | `GET` | `/games/{game}` | Detalle | Público |
 | `GET` | `/register` | Formulario de registro | Invitados |
-| `POST` | `/register` | Crea la cuenta | Invitados |
+| `POST` | `/register` | Crea una cuenta normal (nunca administradora) | Invitados |
 | `GET` | `/login` | Formulario de login | Invitados |
 | `POST` | `/login` | Inicia sesión | Invitados |
 | `POST` | `/logout` | Cierra sesión | Autenticado |
-| `GET` | `/games/create` | Formulario de creación | Autenticado |
-| `POST` | `/games` | Guarda un videojuego | Autenticado |
-| `GET` | `/games/{game}/edit` | Formulario de edición | Autenticado |
-| `PUT/PATCH` | `/games/{game}` | Actualiza | Autenticado |
-| `DELETE` | `/games/{game}` | Elimina | Autenticado |
+| `GET` | `/admin` | Panel de administración | Administrador |
+| `GET` | `/games/create` | Formulario de creación | Administrador |
+| `POST` | `/games` | Guarda un videojuego | Administrador |
+| `GET` | `/games/{game}/edit` | Formulario de edición | Administrador |
+| `PUT/PATCH` | `/games/{game}` | Actualiza | Administrador |
+| `DELETE` | `/games/{game}` | Elimina | Administrador |
 
 Parámetros del catálogo: `?search=`, `?genre=`, `?platform=`, `?page=`.
 
-Las rutas de gestión están protegidas con el middleware `auth`; `GameRequest::authorize()` vuelve a exigir usuario autenticado como segunda capa.
+La protección es doble:
+
+1. Middleware `auth` + `admin` en las rutas de gestión.
+2. `GameRequest::authorize()` exige `is_admin`, aunque se invoque la petición por otra vía.
+
+Un visitante sin sesión se redirige a `/login`; un usuario autenticado sin rol recibe **403**.
 
 ---
 
 ## Pruebas
 
-El proyecto usa **PHPUnit 11** (no Pest). La suite corre sobre **SQLite en memoria** (`:memory:`), por lo que **no toca ni borra** la base de datos local.
+La suite usa **PHPUnit 11** y **SQLite en memoria** (`:memory:`), por lo que no toca la base de datos local.
 
 ```powershell
 php artisan test
-# o
-composer test
-```
-
-Cobertura actual (43 pruebas):
-
-- `tests/Feature/AuthTest.php`: login, credenciales inválidas, registro, email duplicado, contraseña no confirmada, logout y bloqueo de invitados.
-- `tests/Feature/CatalogTest.php`: orden, paginación, búsqueda, filtros, combinación, persistencia de filtros al paginar, filtros inválidos y opciones de los desplegables.
-- `tests/Feature/GameCrudTest.php`: listado, alta, detalle, edición, borrado, 404, validación, límites de valoración (0 y 10), guard del modelo, acciones visibles solo con sesión y redirección de invitados a `/login`.
-- `tests/Feature/DatabaseIsolationTest.php`: confirma que se usa SQLite `:memory:`.
-- `tests/Feature/ExampleTest.php`: la raíz redirige al catálogo.
-
-Para comprobar el estilo del código:
-
-```powershell
 vendor\bin\pint --test
 ```
+
+Cobertura actual (**58 pruebas, 245 aserciones**):
+
+- `tests/Feature/AuthTest.php`: login, credenciales inválidas, registro, email duplicado, contraseña no confirmada, logout, redirección de administradores al panel y prohibición de autoasignarse `is_admin`.
+- `tests/Feature/CatalogTest.php`: orden, paginación, búsqueda, filtros, combinación, persistencia al paginar, filtros inválidos y opciones de los desplegables.
+- `tests/Feature/GameCrudTest.php`: listado, detalle, alta, edición, borrado, 404, validación, límites 0–10, guard del modelo, acciones visibles solo para administradores, invitados redirigidos y usuarios normales con 403.
+- `tests/Feature/AdminPanelTest.php`: acceso al panel, 403 para usuarios normales, búsqueda y estado vacío.
+- `tests/Feature/SeederTest.php`: seeder de administrador idempotente, promoción sin duplicados, 12 juegos y portadas locales existentes.
+- `tests/Feature/ExampleTest.php`: página de inicio y destacados.
+- `tests/Feature/DatabaseIsolationTest.php`: confirma el uso de SQLite `:memory:`.
 
 ---
 
 ## Estructura relevante
 
-```
+```text
 app/
-  Http/Controllers/Auth/                Login y registro
-  Http/Controllers/GameController.php   CRUD + búsqueda, filtros y estadísticas
-  Http/Requests/Auth/LoginRequest.php   Autenticación con rate limiting
-  Http/Requests/GameRequest.php         Validación compartida de alta y edición
-  Models/Game.php                       Modelo, casts y guard de valoración
-bootstrap/app.php                       Health check /up y redirección tras login
+  Console/Commands/CreateAdmin.php       Alta/promoción segura de administradores
+  Http/Controllers/AdminController.php   Panel de administración
+  Http/Controllers/HomeController.php    Página de inicio
+  Http/Controllers/GameController.php    CRUD + búsqueda, filtros y estadísticas
+  Http/Middleware/EnsureUserIsAdmin.php  Middleware del rol admin
+  Http/Requests/GameRequest.php          Validación y autorización
+  Models/Game.php                        Modelo, casts y guard de valoración
+  Models/User.php                        Rol is_admin y helper isAdmin()
+config/gamehub.php                       Cuenta administradora inicial
 database/
-  migrations/                           Tablas de usuarios, caché, jobs y juegos
-  factories/GameFactory.php
-  seeders/DatabaseSeeder.php            Usuario demo solo fuera de producción
-  seeders/GameSeeder.php                12 juegos de ejemplo
-resources/
-  css/app.css                           Tema Tailwind y componentes
-  views/layouts/app.blade.php           Plantilla común con navegación @auth/@guest
-  views/auth/                           login y register
-  views/components/                     Tarjetas, póster, campos, estado vacío
-  views/games/                          index, show, create, edit y _form
-  views/vendor/pagination/              Paginación personalizada
-routes/
-  auth.php                              Login, registro y logout
-  web.php                               Catálogo público / gestión autenticada
-tests/Feature/                          Suite de pruebas
-.github/workflows/ci.yml                CI: pruebas y compatibilidad MySQL
-.github/workflows/cd.yml                CD: deploy hook tras CI en verde
+  migrations/                            Usuarios (+is_admin), caché, jobs y juegos
+  seeders/AdminUserSeeder.php            Administrador idempotente
+  seeders/GameSeeder.php                 12 juegos con portadas locales
+resources/views/
+  home.blade.php                         Página de inicio
+  admin/index.blade.php                  Panel de administración
+  games/                                 index, show, create, edit y _form
+  layouts/app.blade.php                  Navegación por rol
+public/images/games/                     Portadas SVG locales
+scripts/generate-sample-posters.php      Generador reproducible de portadas
+routes/web.php                           Rutas públicas y de administración
+tests/Feature/                           Suite de pruebas
+.github/workflows/ci.yml                 CI: pruebas, Pint, build y MySQL 8.4
+.github/workflows/cd.yml                 CD (se sustituirá por SSH al VPS)
+Dockerfile                               Imagen multi-etapa
+docker-compose.yml                       Stack de desarrollo
+docker-compose.prod.yml                  Stack de producción
+docker/                                  Configuración de PHP-FPM y Nginx
+docs/DOCKER.md                           Guía de Docker y despliegue
 ```
+
+---
+
+## Arquitectura Docker
+
+```text
+Navegador
+    │ :8080 (dev) / :80 (prod)
+    ▼
+Nginx ──FastCGI :9000──► PHP-FPM 8.4 ──MySQL :3306──► MySQL 8.4
+  │                                                       │
+  └─ assets compilados por Vite                    volumen persistente
+```
+
+- **Nginx** es el único servicio web público. Sirve estáticos y pasa PHP a FastCGI.
+- **PHP-FPM** ejecuta Laravel; espera a MySQL en el entrypoint.
+- **MySQL 8.4** guarda los datos en un volumen con nombre.
+- En producción, MySQL vive en una red interna y **no publica puertos**.
+- La imagen se construye en cuatro etapas: `vendor`, `assets`, `runtime` y `webserver`.
+
+Detalles en **[`docs/DOCKER.md`](docs/DOCKER.md)**.
+
+---
+
+## Integración continua (CI)
+
+`.github/workflows/ci.yml` se ejecuta en cada **push a `main`**, en **pull requests** y manualmente.
+
+Hace dos trabajos en paralelo:
+
+1. **Pruebas y compilación**: PHP 8.4, Composer, Node 22, `npm run build`, `pint --test` y `php artisan test` sobre SQLite.
+2. **Compatibilidad MySQL 8.4**: servicio MySQL 8.4 real, migraciones, seed ejecutado dos veces y comprobación de 12 juegos + 1 administrador.
+
+Si cualquier test falla, el workflow se marca en rojo. Resultado en **GitHub → Actions**.
+
+---
+
+## Despliegue (CD)
+
+**Estado actual:** el destino es un **VPS Ubuntu con Docker Compose**. El despliegue real y el CD por SSH se completarán en las fases 7–12. Todavía **no hay workflow de CD activo**: el anterior (Laravel Cloud) se ha retirado porque esa plataforma no forma parte del ejercicio.
+
+El futuro despliegue automático hará:
+
+1. Esperar a que CI esté en verde para `main`.
+2. Conectarse al VPS con una clave de despliegue propia.
+3. `git fetch` + `git checkout` del commit aprobado.
+4. `docker compose -f docker-compose.prod.yml up -d --build`.
+5. `php artisan migrate --force` y `php artisan optimize`.
+6. Comprobar `/up` y el estado de los contenedores.
+
+El `.env.production` permanece en el VPS y los volúmenes nunca se borran.
 
 ---
 
 ## Seguridad
 
-- `.env` **no se versiona** (está en `.gitignore`); usa `.env.example` como plantilla.
-- `database/database.sqlite`, `vendor/`, `node_modules/` y `public/build/` tampoco se versionan.
-- `APP_KEY` se genera por entorno con `php artisan key:generate`; nunca la compartas.
-- En producción: `APP_DEBUG=false`, cookies `secure` y sesiones/caché en base de datos.
-- El registro es público: cualquier visitante puede crear una cuenta y gestionar el catálogo. Si quieres cerrarlo, consulta `DEPLOYMENT.md`.
-- El deploy hook de Laravel Cloud se guarda como secreto de GitHub Actions; nunca se escribe en el repositorio.
-- No hay claves, tokens ni credenciales escritas en el frontend.
-
----
-
-## Despliegue y CI/CD
-
-El runbook completo para **Laravel Cloud + Laravel MySQL** está en [`DEPLOYMENT.md`](DEPLOYMENT.md): conexión con GitHub, variables, build/deploy, health checks, seed inicial, dominio, backups, rollback y CI/CD.
-
-### CI (verificar)
-
-`.github/workflows/ci.yml` se ejecuta en cada push a `main`, en pull requests y manualmente:
-
-- PHPUnit sobre SQLite en memoria.
-- Job adicional sobre **MySQL 8.4** con migraciones y seed.
-- Pint y build de Vite.
-- No despliega nada.
-
-### CD (publicar)
-
-`.github/workflows/cd.yml` se dispara **solo cuando CI termina en verde** para un push a `main`:
-
-1. Comprueba que existe el secreto `LARAVEL_CLOUD_DEPLOY_HOOK`.
-2. Hace `POST` al deploy hook oficial de Laravel Cloud con el SHA exacto que pasó el CI.
-3. Laravel Cloud construye, migra, comprueba `/up` y publica con zero downtime.
-
-**Push to deploy de Laravel Cloud debe estar desactivado** para no desplegar commits que no han pasado las pruebas. El único mecanismo activo es el deploy hook, guardado como secreto de GitHub Actions.
-
-Resumen de comandos que ejecuta Laravel Cloud:
-
-```sh
-# Build
-composer install --no-dev --optimize-autoloader && npm ci --audit false && npm run build && php artisan optimize
-
-# Deploy
-php artisan migrate --force
-```
+- `.env`, `.env.docker` y `.env.production` **no se versionan**; solo se publican los `*.example`.
+- No hay contraseñas reales en el repositorio.
+- El registro público crea siempre usuarios **sin** permisos de administración.
+- En producción: `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE_COOKIE=true`.
+- MySQL de producción no expone el puerto 3306 y usa una red interna.
+- Nginx bloquea el acceso a archivos ocultos (`.env`, `.git`, etc.).
+- Los secretos de CI/CD se guardan en **GitHub Secrets**, nunca en el YAML.
+- `APP_KEY` es distinta por entorno y se conserva entre despliegues.
 
 ---
 
@@ -239,12 +288,14 @@ php artisan migrate --force
 
 | Síntoma | Causa / solución |
 |---|---|
-| `Vite manifest not found` | Ejecuta `npm run build` (o `npm run dev`). |
-| `Database file ... does not exist` | `php artisan migrate --force` la crea; también puedes crear `database/database.sqlite` vacío. |
-| `419 Page Expired` | Falta `APP_KEY` o cambió: `php artisan key:generate`. |
-| `Route [login] not defined` | Falta `require __DIR__.'/auth.php'` en `routes/web.php`. |
-| Los cambios de CSS no se ven | Recompila con `npm run build` o usa `composer run dev`. |
-| Aviso de extensión `intl` en XAMPP | Afecta solo a `php artisan db:show`, no a la aplicación. |
+| `Vite manifest not found` | Ejecuta `npm run build` o `composer run dev`. |
+| `Database file ... does not exist` | `php artisan migrate --force` la crea. |
+| `419 Page Expired` | Falta `APP_KEY`, cambió o la cookie `secure` no encaja con HTTP. |
+| `env file .env.docker not found` | `Copy-Item .env.docker.example .env.docker`. |
+| `DB_PASSWORD is required` | Falta `--env-file .env.docker`. |
+| 403 en `/admin` | La cuenta no tiene `is_admin`; usa `php artisan gamehub:admin`. |
+| 502 Bad Gateway | PHP-FPM aún no está listo; revisa `docker compose logs app`. |
+| Los cambios no aparecen en Docker | `docker compose --env-file .env.docker up -d --build`. |
 
 ---
 

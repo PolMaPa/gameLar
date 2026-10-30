@@ -1,0 +1,133 @@
+# =============================================================================
+# GameHub · Docker Compose para PRODUCCIÓN (VPS Ubuntu)
+#
+#   Nginx (80/443)  ->  PHP-FPM  ->  MySQL 8.4 (red interna, sin puerto público)
+#
+# Uso en el VPS:
+#   cp .env.production.example .env.production   # rellena valores reales
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# Diferencias con desarrollo:
+#   - MySQL no publica puertos: solo accesible por la red interna.
+#   - Migraciones NO automáticas: se ejecutan de forma controlada.
+#   - Configuración/rutas/vistas cacheadas (php artisan optimize).
+#   - restart: always y healthchecks.
+#   - El archivo .env.production NO se versiona.
+# =============================================================================
+
+name: gamehub-prod
+
+services:
+  # ---------------------------------------------------------------------------
+  # Aplicación Laravel sobre PHP-FPM 8.4
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      target: runtime
+      args:
+        PHP_VERSION: "8.4"
+        NODE_VERSION: "22"
+    image: "${APP_IMAGE:-gamehub-app:prod}"
+    restart: always
+
+    env_file:
+      - .env.production
+
+    environment:
+      RUN_MIGRATIONS: "${RUN_MIGRATIONS:-false}"
+      APP_OPTIMIZE: "true"
+
+    volumes:
+      - storage-prod:/var/www/html/storage
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - frontend
+      - backend
+
+  # ---------------------------------------------------------------------------
+  # Nginx: reverse proxy FastCGI y estáticos
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: .
+      target: webserver
+      args:
+        NGINX_CONF: prod.conf
+    image: "${NGINX_IMAGE:-gamehub-nginx:prod}"
+    restart: always
+
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      # Cuando exista certificado TLS en el VPS:
+      # - "443:443"
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - frontend
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.4 con volumen persistente y sin exposición externa
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.4
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?Define DB_ROOT_PASSWORD en .env.production}"
+      MYSQL_DATABASE: "${DB_DATABASE:?Define DB_DATABASE en .env.production}"
+      MYSQL_USER: "${DB_USERNAME:?Define DB_USERNAME en .env.production}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?Define DB_PASSWORD en .env.production}"
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+    volumes:
+      - db-prod:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+    networks:
+      - backend
+
+volumes:
+  db-prod:
+    name: gamehub-db-prod
+  storage-prod:
+    name: gamehub-storage-prod
+
+networks:
+  # Nginx <-> PHP-FPM
+  frontend:
+    name: gamehub-prod-frontend
+  # PHP-FPM <-> MySQL: aislada de Internet.
+  backend:
+    name: gamehub-prod-backend
+    internal: true

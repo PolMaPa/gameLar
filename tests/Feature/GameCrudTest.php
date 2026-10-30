@@ -12,15 +12,15 @@ class GameCrudTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Autentica al usuario para acceder a las rutas de gestión.
+     * Autentica a un administrador para acceder a las rutas de gestión.
      */
-    private function actingAsUser(): User
+    private function actingAsAdmin(): User
     {
-        $user = User::factory()->create();
+        $admin = User::factory()->admin()->create();
 
-        $this->actingAs($user);
+        $this->actingAs($admin);
 
-        return $user;
+        return $admin;
     }
 
     /**
@@ -36,7 +36,7 @@ class GameCrudTest extends TestCase
             'platform' => 'SNES',
             'release_date' => '1995-03-11',
             'rating' => '9.6',
-            'image_url' => '/images/games/chrono-trigger.jpg',
+            'image_url' => '/images/games/chrono-trigger.svg',
         ], $overrides);
     }
 
@@ -71,9 +71,27 @@ class GameCrudTest extends TestCase
             ->assertDontSee(route('games.edit', $game), false);
     }
 
-    public function test_authenticated_users_see_management_actions_in_the_catalogue(): void
+    public function test_non_admin_users_do_not_see_management_actions(): void
     {
-        $this->actingAsUser();
+        $user = User::factory()->create(['is_admin' => false]);
+
+        $game = Game::factory()->create(['name' => 'Celeste']);
+
+        $this->actingAs($user)
+            ->get(route('games.index'))
+            ->assertOk()
+            ->assertDontSee(route('games.create'), false)
+            ->assertDontSee(route('games.edit', $game), false);
+
+        $this->actingAs($user)
+            ->get(route('games.show', $game))
+            ->assertOk()
+            ->assertDontSee(route('games.edit', $game), false);
+    }
+
+    public function test_admins_see_management_actions_in_the_catalogue(): void
+    {
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['name' => 'Celeste']);
 
@@ -100,9 +118,24 @@ class GameCrudTest extends TestCase
         $this->assertDatabaseCount('games', 1);
     }
 
+    public function test_non_admin_users_are_forbidden_from_management_routes(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+        $game = Game::factory()->create(['name' => 'Intacto']);
+
+        $this->actingAs($user)->get(route('games.create'))->assertForbidden();
+        $this->actingAs($user)->get(route('games.edit', $game))->assertForbidden();
+        $this->actingAs($user)->post(route('games.store'), $this->validPayload())->assertForbidden();
+        $this->actingAs($user)->put(route('games.update', $game), $this->validPayload(['name' => 'Cambiado']))->assertForbidden();
+        $this->actingAs($user)->delete(route('games.destroy', $game))->assertForbidden();
+
+        $this->assertDatabaseCount('games', 1);
+        $this->assertDatabaseHas('games', ['name' => 'Intacto']);
+    }
+
     public function test_create_form_is_accessible_and_includes_csrf_protection(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $this->get(route('games.create'))
             ->assertOk()
@@ -112,7 +145,7 @@ class GameCrudTest extends TestCase
 
     public function test_store_creates_a_game(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $response = $this->post(route('games.store'), $this->validPayload());
 
@@ -128,7 +161,7 @@ class GameCrudTest extends TestCase
 
     public function test_store_converts_empty_optional_fields_to_null(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $this->post(route('games.store'), $this->validPayload([
             'release_date' => '',
@@ -145,7 +178,7 @@ class GameCrudTest extends TestCase
 
     public function test_store_rejects_invalid_data(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $this->from(route('games.create'))
             ->post(route('games.store'), [
@@ -182,7 +215,7 @@ class GameCrudTest extends TestCase
 
     public function test_edit_form_uses_put_method_and_csrf(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['name' => 'Portal 2']);
 
@@ -196,7 +229,7 @@ class GameCrudTest extends TestCase
 
     public function test_update_modifies_a_game(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['name' => 'Viejo nombre', 'rating' => 5]);
 
@@ -214,7 +247,7 @@ class GameCrudTest extends TestCase
 
     public function test_update_rejects_invalid_data(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['name' => 'Intacto']);
 
@@ -228,7 +261,7 @@ class GameCrudTest extends TestCase
 
     public function test_destroy_deletes_a_game(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['name' => 'Borrame']);
 
@@ -241,14 +274,14 @@ class GameCrudTest extends TestCase
 
     public function test_destroy_returns_404_for_a_missing_game(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $this->delete('/games/999999')->assertNotFound();
     }
 
     public function test_store_accepts_the_rating_boundaries(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $this->post(route('games.store'), $this->validPayload(['name' => 'Nota cero', 'rating' => '0']))
             ->assertRedirect();
@@ -262,7 +295,7 @@ class GameCrudTest extends TestCase
 
     public function test_store_rejects_ratings_outside_the_allowed_range(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         foreach (['10.1', '-0.1', '99', 'abc'] as $index => $rating) {
             $this->from(route('games.create'))
@@ -279,7 +312,7 @@ class GameCrudTest extends TestCase
 
     public function test_update_rejects_ratings_outside_the_allowed_range(): void
     {
-        $this->actingAsUser();
+        $this->actingAsAdmin();
 
         $game = Game::factory()->create(['rating' => 5]);
 

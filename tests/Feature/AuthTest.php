@@ -119,4 +119,48 @@ class AuthTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_new_users_register_without_admin_privileges(): void
+    {
+        $this->post(route('register'), [
+            'name' => 'Ada Lovelace',
+            'email' => 'ada@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertRedirect(route('games.index'));
+
+        $user = User::where('email', 'ada@example.com')->firstOrFail();
+
+        $this->assertFalse($user->isAdmin());
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_registration_cannot_self_assign_the_admin_role(): void
+    {
+        $this->post(route('register'), [
+            'name' => 'Aspirante',
+            'email' => 'aspirante@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'is_admin' => true,
+        ])->assertRedirect(route('games.index'));
+
+        $user = User::where('email', 'aspirante@example.com')->firstOrFail();
+
+        $this->assertFalse($user->isAdmin());
+    }
+
+    public function test_admins_are_redirected_to_the_panel_after_login(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'password' => Hash::make('password'),
+        ]);
+
+        $this->post(route('login'), [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect(route('admin.index'));
+
+        $this->assertAuthenticatedAs($admin);
+    }
 }

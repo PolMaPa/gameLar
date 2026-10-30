@@ -1,16 +1,21 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/games');
+// Página de inicio pública.
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// La gestión del catálogo requiere autenticación. El catálogo en sí
-// (listado y detalle) sigue siendo público.
-Route::middleware('auth')->group(function () {
+// Gestión del catálogo: solo administradores con sesión iniciada.
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+
     Route::resource('games', GameController::class)->except(['index', 'show']);
 });
 
+// Catálogo público: listado y detalle.
 Route::resource('games', GameController::class)->only(['index', 'show']);
 
 require __DIR__.'/auth.php';

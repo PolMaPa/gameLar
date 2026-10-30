@@ -1,5 +1,10 @@
 # Despliegue en Laravel Cloud
 
+> **Documento histórico:** esta guía describe la vía Laravel Cloud que se usó en una
+> fase anterior del proyecto. El ejercicio **ya no utiliza Laravel Cloud**: el
+> despliegue actual y futuro es un **VPS Ubuntu con Docker Compose** (ver
+> [`docs/DOCKER.md`](docs/DOCKER.md)). Se conserva solo como referencia.
+
 Guía operativa para publicar **GameHub** en [Laravel Cloud](https://cloud.laravel.com) con **Laravel MySQL**. Está escrita para ejecutarse desde el panel web (sin SSH) y documenta también el flujo **CI/CD** con GitHub Actions.
 
 > Documentación oficial consultada:

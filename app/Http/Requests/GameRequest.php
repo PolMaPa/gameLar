@@ -8,11 +8,11 @@ use Illuminate\Foundation\Http\FormRequest;
 class GameRequest extends FormRequest
 {
     /**
-     * Solo los usuarios autenticados pueden crear o modificar juegos.
+     * Solo los administradores autenticados pueden crear o modificar juegos.
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->isAdmin() ?? false;
     }
 
     /**

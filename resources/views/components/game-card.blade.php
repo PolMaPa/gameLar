@@ -34,7 +34,7 @@
         <div class="flex items-center gap-2 border-t border-white/5 pt-3">
             <a href="{{ route('games.show', $game) }}" class="btn btn-ghost btn-sm flex-1">Ver</a>
 
-            @auth
+            @if (auth()->user()?->isAdmin())
                 <a href="{{ route('games.edit', $game) }}" class="btn btn-ghost btn-sm flex-1">Editar</a>
                 <form action="{{ route('games.destroy', $game) }}" method="POST" class="flex-1"
                       onsubmit="return confirm('¿Eliminar este videojuego?')">
@@ -42,7 +42,7 @@
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger btn-sm w-full">Eliminar</button>
                 </form>
-            @endauth
+            @endif
         </div>
     </div>
 </article>

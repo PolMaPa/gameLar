@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Catálogo de videojuegos de {{ config('app.name', 'gameLar') }}">
-    <title>@yield('title', 'Catálogo') · {{ config('app.name', 'gameLar') }}</title>
+    <meta name="description" content="Catálogo de videojuegos de {{ config('app.name', 'GameHub') }}">
+    <title>@yield('title', 'Catálogo') · {{ config('app.name', 'GameHub') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="flex min-h-full flex-col">
@@ -15,7 +15,7 @@
 
     <header class="sticky top-0 z-40 border-b border-white/5 bg-ink-950/80 backdrop-blur">
         <div class="container-page flex h-16 items-center justify-between gap-4">
-            <a href="{{ route('games.index') }}" class="flex items-center gap-2.5" aria-label="{{ config('app.name') }} — inicio">
+            <a href="{{ route('home') }}" class="flex items-center gap-2.5" aria-label="{{ config('app.name') }} — inicio">
                 <span class="grid size-9 place-items-center rounded-xl bg-linear-to-br from-brand-500 to-fuchsia-500 text-white shadow-lg shadow-brand-600/30">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                          stroke-linecap="round" stroke-linejoin="round" class="size-5" aria-hidden="true">
@@ -23,10 +23,16 @@
                         <path d="M7 10.5v3M5.5 12h3M15.5 11.5h.01M17.5 13.5h.01"/>
                     </svg>
                 </span>
-                <span class="text-lg font-extrabold tracking-tight text-white">{{ config('app.name', 'gameLar') }}</span>
+                <span class="text-lg font-extrabold tracking-tight text-white">{{ config('app.name', 'GameHub') }}</span>
             </a>
 
             <nav aria-label="Navegación principal" class="flex items-center gap-1 sm:gap-2">
+                <a href="{{ route('home') }}"
+                   class="nav-link hidden sm:inline-flex {{ request()->routeIs('home') ? 'nav-link-active' : '' }}"
+                   @if (request()->routeIs('home')) aria-current="page" @endif>
+                    Inicio
+                </a>
+
                 <a href="{{ route('games.index') }}"
                    class="nav-link {{ request()->routeIs('games.index', 'games.show') ? 'nav-link-active' : '' }}"
                    @if (request()->routeIs('games.index', 'games.show')) aria-current="page" @endif>
@@ -34,15 +40,26 @@
                 </a>
 
                 @auth
-                    <a href="{{ route('games.create') }}" class="btn btn-primary btn-sm sm:px-4 sm:py-2.5 {{ request()->routeIs('games.create') ? 'ring-2 ring-white/30' : '' }}">
-                        <span aria-hidden="true">+</span>
-                        <span class="sm:hidden">Nuevo</span>
-                        <span class="hidden sm:inline">Nuevo juego</span>
-                    </a>
+                    @if (auth()->user()->isAdmin())
+                        <a href="{{ route('admin.index') }}"
+                           class="nav-link {{ request()->routeIs('admin.*') ? 'nav-link-active' : '' }}"
+                           @if (request()->routeIs('admin.*')) aria-current="page" @endif>
+                            Panel
+                        </a>
 
-                    <span class="hidden max-w-32 truncate text-sm text-slate-400 sm:inline"
+                        <a href="{{ route('games.create') }}" class="btn btn-primary btn-sm sm:px-4 sm:py-2.5 {{ request()->routeIs('games.create') ? 'ring-2 ring-white/30' : '' }}">
+                            <span aria-hidden="true">+</span>
+                            <span class="sm:hidden">Nuevo</span>
+                            <span class="hidden sm:inline">Nuevo juego</span>
+                        </a>
+                    @endif
+
+                    <span class="hidden max-w-32 items-center gap-1.5 truncate text-sm text-slate-400 md:flex"
                           title="{{ auth()->user()->email }}">
                         {{ auth()->user()->name }}
+                        @if (auth()->user()->isAdmin())
+                            <span class="badge border-brand-400/30 bg-brand-500/10 py-0.5 text-brand-300">Admin</span>
+                        @endif
                     </span>
 
                     <form method="POST" action="{{ route('logout') }}">
@@ -73,8 +90,8 @@
 
     <footer class="border-t border-white/5 py-6">
         <div class="container-page flex flex-col items-center justify-between gap-2 text-xs text-slate-500 sm:flex-row">
-            <p>© {{ date('Y') }} {{ config('app.name', 'gameLar') }} · Catálogo de videojuegos</p>
-            <p>Laravel {{ app()->version() }} · Laravel Cloud</p>
+            <p>© {{ date('Y') }} {{ config('app.name', 'GameHub') }} · Catálogo de videojuegos</p>
+            <p>Laravel {{ app()->version() }} · PHP {{ PHP_VERSION }} · Docker · VPS</p>
         </div>
     </footer>
 </body>

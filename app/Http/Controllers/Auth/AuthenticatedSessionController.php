@@ -28,7 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('games.index', absolute: false));
+        // Los administradores aterrizan en su panel; el resto, en el catálogo.
+        $default = $request->user()?->isAdmin()
+            ? route('admin.index', absolute: false)
+            : route('games.index', absolute: false);
+
+        return redirect()->intended($default);
     }
 
     /**

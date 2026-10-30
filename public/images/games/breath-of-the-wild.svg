@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Portada de The Legend of Zelda: Breath of the Wild">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b3d2e"/>
+      <stop offset="1" stop-color="#2f9e72"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="1000" fill="url(#bg)"/>
+
+  <circle cx="650" cy="180" r="230" fill="#ffffff" fill-opacity="0.08"/>
+  <circle cx="140" cy="420" r="150" fill="#ffffff" fill-opacity="0.06"/>
+  <circle cx="560" cy="620" r="90" fill="#ffffff" fill-opacity="0.05"/>
+
+  <text x="64" y="120" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" letter-spacing="6" fill="#ffffff" fill-opacity="0.7">GAMEHUB</text>
+
+  <text x="400" y="480" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="230" font-weight="800" fill="#ffffff" fill-opacity="0.16">LZ</text>
+
+  <rect y="620" width="800" height="380" fill="url(#fade)"/>
+
+    <text x="64" y="766" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#ffffff">The Legend of Zelda:</text>
+    <text x="64" y="830" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#ffffff">Breath of the Wild</text>
+
+    <text x="64" y="910" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="24" fill="#ffffff" fill-opacity="0.82">Action-Adventure · Nintendo Switch</text>
+</svg>

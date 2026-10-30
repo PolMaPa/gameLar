@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,29 +11,14 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * El orden importa: primero la cuenta de administrador y después el
+     * catálogo de demostración. Ambos seeders son idempotentes.
      */
     public function run(): void
     {
-        // En producción solo se siembra el catálogo demo. No se crean
-        // usuarios de prueba: las cuentas se crean desde el registro público.
-        if (app()->environment('production')) {
-            $this->call([
-                GameSeeder::class,
-            ]);
-
-            return;
-        }
-
-        // Idempotente: no duplica el usuario de prueba si se vuelve a sembrar.
-        User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => 'password',
-            ],
-        );
-
         $this->call([
+            AdminUserSeeder::class,
             GameSeeder::class,
         ]);
     }

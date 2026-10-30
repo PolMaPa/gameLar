@@ -20,7 +20,7 @@ class GameSeeder extends Seeder
             'platform' => 'Nintendo Switch',
             'release_date' => '2017-03-03',
             'rating' => 9.7,
-            'image_url' => '/images/games/breath-of-the-wild.jpg',
+            'image_url' => '/images/games/breath-of-the-wild.svg',
         ],
         [
             'name' => 'Red Dead Redemption 2',
@@ -29,7 +29,7 @@ class GameSeeder extends Seeder
             'platform' => 'PlayStation 4',
             'release_date' => '2018-10-26',
             'rating' => 9.7,
-            'image_url' => '/images/games/red-dead-redemption-2.jpg',
+            'image_url' => '/images/games/red-dead-redemption-2.svg',
         ],
         [
             'name' => 'The Witcher 3: Wild Hunt',
@@ -38,7 +38,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2015-05-19',
             'rating' => 9.8,
-            'image_url' => '/images/games/the-witcher-3.jpg',
+            'image_url' => '/images/games/the-witcher-3.svg',
         ],
         [
             'name' => 'Elden Ring',
@@ -47,7 +47,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2022-02-25',
             'rating' => 9.6,
-            'image_url' => '/images/games/elden-ring.jpg',
+            'image_url' => '/images/games/elden-ring.svg',
         ],
         [
             'name' => 'Hollow Knight',
@@ -56,7 +56,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2017-02-24',
             'rating' => 9.0,
-            'image_url' => '/images/games/hollow-knight.jpg',
+            'image_url' => '/images/games/hollow-knight.svg',
         ],
         [
             'name' => 'Hades',
@@ -65,7 +65,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2020-09-17',
             'rating' => 9.3,
-            'image_url' => '/images/games/hades.jpg',
+            'image_url' => '/images/games/hades.svg',
         ],
         [
             'name' => 'Stardew Valley',
@@ -74,7 +74,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2016-02-26',
             'rating' => 8.9,
-            'image_url' => '/images/games/stardew-valley.jpg',
+            'image_url' => '/images/games/stardew-valley.svg',
         ],
         [
             'name' => 'Celeste',
@@ -83,7 +83,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2018-01-25',
             'rating' => 9.1,
-            'image_url' => '/images/games/celeste.jpg',
+            'image_url' => '/images/games/celeste.svg',
         ],
         [
             'name' => 'God of War',
@@ -92,7 +92,7 @@ class GameSeeder extends Seeder
             'platform' => 'PlayStation 4',
             'release_date' => '2018-04-20',
             'rating' => 9.4,
-            'image_url' => '/images/games/god-of-war.jpg',
+            'image_url' => '/images/games/god-of-war.svg',
         ],
         [
             'name' => 'Portal 2',
@@ -101,7 +101,7 @@ class GameSeeder extends Seeder
             'platform' => 'PC',
             'release_date' => '2011-04-19',
             'rating' => 9.5,
-            'image_url' => '/images/games/portal-2.jpg',
+            'image_url' => '/images/games/portal-2.svg',
         ],
         [
             'name' => 'Minecraft',

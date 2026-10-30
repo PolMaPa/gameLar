@@ -58,7 +58,7 @@ class GameFactory extends Factory
             'release_date' => fake()->dateTimeBetween('-30 years', 'now')->format('Y-m-d'),
             'rating' => fake()->randomFloat(1, 0, 10),
             // 20 % de los juegos sin imagen para probar el campo nullable.
-            'image_url' => fake()->boolean(80) ? "/images/games/{$slug}.jpg" : null,
+            'image_url' => fake()->boolean(80) ? "/images/games/{$slug}.svg" : null,
         ];
     }
 }

@@ -15,11 +15,11 @@
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <a href="#catalogo" class="btn btn-primary">Ver catálogo</a>
-                @auth
+                @if (auth()->user()?->isAdmin())
                     <a href="{{ route('games.create') }}" class="btn btn-ghost">
                         <span aria-hidden="true">+</span> Añadir videojuego
                     </a>
-                @endauth
+                @endif
             </div>
         </div>
 
@@ -101,11 +101,11 @@
                 </p>
             </div>
 
-            @auth
+            @if (auth()->user()?->isAdmin())
                 <a href="{{ route('games.create') }}" class="btn btn-ghost btn-sm">
                     <span aria-hidden="true">+</span> Nuevo juego
                 </a>
-            @endauth
+            @endif
         </div>
 
         @if ($games->isEmpty())
@@ -116,11 +116,11 @@
                 </x-empty-state>
             @else
                 <x-empty-state>
-                    @auth
+                    @if (auth()->user()?->isAdmin())
                         <a href="{{ route('games.create') }}" class="btn btn-primary">Añadir el primero</a>
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-primary">Iniciar sesión para añadir juegos</a>
-                    @endauth
+                        <a href="{{ route('login') }}" class="btn btn-primary">Iniciar sesión como administrador</a>
+                    @endif
                 </x-empty-state>
             @endif
         @else

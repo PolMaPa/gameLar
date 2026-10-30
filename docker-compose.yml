@@ -1,0 +1,127 @@
+# =============================================================================
+# GameHub · Docker Compose para DESARROLLO LOCAL
+#
+#   Nginx (puerto 8080 del host)  ->  PHP-FPM  ->  MySQL 8.4
+#
+# Uso:
+#   cp .env.docker.example .env.docker     # rellena APP_KEY y contraseñas
+#   docker compose --env-file .env.docker up -d --build
+#
+# El archivo .env.docker NO se versiona (está en .gitignore).
+# =============================================================================
+
+name: gamehub-dev
+
+services:
+  # ---------------------------------------------------------------------------
+  # Aplicación Laravel sobre PHP-FPM 8.4
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      target: runtime
+      args:
+        PHP_VERSION: "8.4"
+        NODE_VERSION: "22"
+    image: gamehub-app:dev
+    restart: unless-stopped
+
+    env_file:
+      - .env.docker
+
+    environment:
+      # En local migramos al arrancar para que el contenedor quede listo.
+      RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
+      APP_OPTIMIZE: "false"
+
+    volumes:
+      # Persistente: logs y archivos generados sobreviven a reinicios.
+      - storage-dev:/var/www/html/storage
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - gamehub
+
+  # ---------------------------------------------------------------------------
+  # Nginx: sirve los estáticos y pasa PHP a PHP-FPM
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: .
+      target: webserver
+      args:
+        NGINX_CONF: default.conf
+    image: gamehub-nginx:dev
+    restart: unless-stopped
+
+    ports:
+      - "${APP_PORT:-8080}:80"
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - gamehub
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.4 con volumen persistente
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?Define DB_ROOT_PASSWORD en .env.docker}"
+      MYSQL_DATABASE: "${DB_DATABASE:?Define DB_DATABASE en .env.docker}"
+      MYSQL_USER: "${DB_USERNAME:?Define DB_USERNAME en .env.docker}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?Define DB_PASSWORD en .env.docker}"
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+    ports:
+      # 3307 en el host para no chocar con el MySQL de XAMPP (3306).
+      - "${DB_PORT_HOST:-3307}:3306"
+
+    volumes:
+      - db-dev:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+    networks:
+      - gamehub
+
+volumes:
+  # Nombres explícitos: no dependen del nombre de la carpeta del proyecto.
+  db-dev:
+    name: gamehub-db-dev
+  storage-dev:
+    name: gamehub-storage-dev
+
+networks:
+  gamehub:
+    name: gamehub-dev

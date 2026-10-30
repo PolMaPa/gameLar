@@ -1,0 +1,45 @@
+# Todo lo que NO debe entrar en la imagen.
+# Se excluyen secretos, artefactos locales y dependencias que se instalan dentro.
+
+.git
+.gitignore
+.gitattributes
+.github
+
+# Entornos: la configuración real viaja como variables de entorno del compose.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Dependencias (se instalan en las etapas vendor/assets)
+vendor
+node_modules
+
+# Assets compilados en local (los genera la etapa assets)
+public/build
+public/hot
+
+# Estado local y datos
+database/database.sqlite
+.phpunit.result.cache
+.phpunit.cache
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+storage/app/public/*
+
+# Artefactos de Docker y documentación operativa (no hacen falta en runtime)
+docker-compose*.yml
+Dockerfile
+.dockerignore
+docs
+*.md
+
+# Tests y herramientas de desarrollo no se necesitan para servir la app
+tests
+phpunit.xml
+.pint
+.editorconfig

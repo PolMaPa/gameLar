@@ -165,4 +165,4 @@ jobs:
 
       - name: Comprobar los datos sembrados
         run: |
-          php artisan tinker --execute="if (App\Models\Game::count() !== 12 || App\Models\User::count() !== 1) { throw new RuntimeException('Seed inesperado: se esperaban 12 juegos y 1 usuario.'); }"
+          php artisan tinker --execute="if (App\Models\Game::count() !== 12 || App\Models\User::count() !== 1) { throw new RuntimeException('Seed inesperado: se esperaban 12 juegos y 1 usuario.'); } if (App\Models\User::where('is_admin', true)->count() !== 1) { throw new RuntimeException('Seed inesperado: falta el administrador.'); }"
