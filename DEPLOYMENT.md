@@ -1,6 +1,6 @@
 # Despliegue en Laravel Cloud
 
-Guía operativa para publicar **GameHub** en [Laravel Cloud](https://cloud.laravel.com) con **Laravel MySQL**. Está escrita para ejecutarse desde el panel web (sin SSH) y **no** se ha ejecutado todavía: el servicio aún no existe.
+Guía operativa para publicar **GameHub** en [Laravel Cloud](https://cloud.laravel.com) con **Laravel MySQL**. Está escrita para ejecutarse desde el panel web (sin SSH) y documenta también el flujo **CI/CD** con GitHub Actions.
 
 > Documentación oficial consultada:
 > - [Guía de despliegue de Laravel](https://laravel.com/cloud/docs/deploy-guides/laravel)
@@ -49,6 +49,8 @@ Archivos que deben estar versionados:
 - [ ] `routes/auth.php`
 - [ ] `resources/views/auth/login.blade.php` y `register.blade.php`
 - [ ] `bootstrap/app.php` (redirección de usuarios autenticados)
+- [ ] `.github/workflows/ci.yml` (pruebas)
+- [ ] `.github/workflows/cd.yml` (despliegue tras CI en verde)
 - [ ] `.env.production.example` y `DEPLOYMENT.md`
 - [ ] `.gitignore` con `!.env.*.example`
 
@@ -67,15 +69,18 @@ Nunca versiones `.env`, `APP_KEY`, contraseñas ni credenciales de MySQL.
 
 > El primer despliegue puede lanzarse al crear la aplicación. Si quieres revisar la configuración antes de publicar, deja la configuración por defecto y **no compartas todavía la URL**.
 
-### Desactivar el despliegue automático
+### Cómo se conecta Laravel Cloud con GitHub
 
-Por ahora no queremos despliegues automáticos:
+Al crear la aplicación, Laravel Cloud instala su GitHub App en el repositorio y configura un webhook. A partir de ahí puede recibir los pushes de la rama `main`.
 
-1. Ve a **Settings → Deployments**.
-2. Desactiva **Push to deploy**.
-3. A partir de ahí, cada publicación se hace con el botón **Deploy**.
+Laravel Cloud ofrece dos mecanismos oficiales:
 
-El workflow de GitHub Actions (`.github/workflows/ci.yml`) es independiente y solo ejecuta pruebas; no despliega.
+| Mecanismo | Qué hace | ¿Espera al CI? |
+|---|---|---|
+| **Push to deploy** | Despliega en cada push a la rama conectada | No |
+| **Deploy hook** | Despliega cuando un pipeline hace `POST` a una URL | Sí, si el pipeline lo invoca tras las pruebas |
+
+Para este proyecto usamos **solo el deploy hook**, invocado por GitHub Actions cuando el CI termina en verde. **Push to deploy debe quedar desactivado** para no desplegar commits que aún no han pasado las pruebas. La configuración exacta está en el **apartado 8**.
 
 ---
 
@@ -179,11 +184,140 @@ php artisan migrate --force
 ```
 
 - Migraciones hacia delante. **Nunca** `migrate:fresh`, `migrate:refresh` ni `db:wipe`.
-- No añadas `db:seed` al deploy: los datos demo se siembran una sola vez (paso 9).
+- No añadas `db:seed` al deploy: los datos demo se siembran una sola vez (paso 10).
 
 ---
 
-## 8. Health checks
+## 8. CI/CD: de GitHub a producción
+
+### Arquitectura
+
+```text
+push a main / pull request
+        │
+        ▼
+CI · GitHub Actions
+  ├─ Pruebas y compilación (SQLite + Pint + Vite)
+  └─ Compatibilidad MySQL 8.4
+        │
+        │ solo si el evento fue push a main y TODO el CI pasó
+        ▼
+CD · GitHub Actions
+  └─ POST al deploy hook de Laravel Cloud con el SHA exacto
+        │
+        ▼
+Laravel Cloud
+  ├─ build (composer, npm, optimize)
+  ├─ migrate --force
+  ├─ health check /up
+  └─ publicación con zero downtime
+```
+
+| | CI | CD |
+|---|---|---|
+| Archivo | `.github/workflows/ci.yml` | `.github/workflows/cd.yml` |
+| Disparador | push a `main`, pull request, manual | `workflow_run` cuando termina **CI** |
+| Objetivo | verificar el código | publicar en producción |
+| Qué ejecuta | PHPUnit, Pint, build de Vite, MySQL 8.4 | `POST` al deploy hook |
+| Secretos | ninguno | `LARAVEL_CLOUD_DEPLOY_HOOK` |
+| Si falla | no se despliega | Laravel Cloud no publica |
+
+El CD **no** instala dependencias, no compila assets y no ejecuta migraciones: todo eso lo hace Laravel Cloud con el commit indicado. Así no duplicamos el mecanismo de despliegue.
+
+### Por qué deploy hook y no push to deploy
+
+Laravel Cloud tiene **Push to deploy** activado por defecto y despliega en cuanto recibe el push. No espera a que terminen los checks de GitHub. Para cumplir la regla «si el CI falla, no se despliega», usamos el **deploy hook** oficial, invocado por el CD solo cuando el CI ha terminado en verde.
+
+> Solo debe quedar **un mecanismo activo**: el deploy hook. Si dejas Push to deploy activado, un push fallido podría desplegarse igualmente y además se lanzarían dos despliegues por commit.
+
+### Configuración inicial (una sola vez)
+
+1. **Comprobar la conexión en Laravel Cloud**
+   - Entra en el entorno de producción.
+   - En **Settings → General**, confirma que el repositorio es `PolMaPa/gameLar` y la rama `main`.
+   - Si no coincide, corrígelo antes de continuar.
+
+2. **Desactivar Push to deploy**
+   - **Settings → Deployments**.
+   - Desactiva **Push to deploy**.
+
+3. **Activar el deploy hook**
+   - En la misma pantalla, activa **Deploy hook**.
+   - Copia la URL generada. Es un **secreto**: quien la tenga puede desplegar.
+   - No la pegues en el repositorio, en un `.env` versionado ni en la documentación.
+
+4. **Guardar la URL como secreto de GitHub**
+   - Repositorio → **Settings → Secrets and variables → Actions**.
+   - **New repository secret**.
+   - Nombre: `LARAVEL_CLOUD_DEPLOY_HOOK`.
+   - Valor: la URL del deploy hook.
+   - GitHub la oculta en los logs y solo la exponen los workflows del repositorio.
+
+5. **Protección opcional de la rama `main`**
+   - Repositorio → **Settings → Branches → Add branch protection rule**.
+   - Exige pull request y los checks `Pruebas y compilación` y `Compatibilidad MySQL 8.4`.
+   - Así solo llega a `main` código revisado y con CI en verde.
+
+6. **Aprobación opcional del despliegue**
+   - Repositorio → **Settings → Environments → production**.
+   - Añade **Required reviewers** si quieres que un despliegue espere aprobación manual después del CI.
+   - Sin revisores, el CD es completamente automático tras el CI.
+   - El workflow ya declara `environment: production`, así que GitHub registra cada despliegue.
+
+### Cómo funciona el workflow de CD
+
+`cd.yml` se activa con `workflow_run` cuando termina el workflow llamado exactamente **CI**. El job solo se ejecuta si:
+
+- `conclusion == 'success'` → todas las pruebas pasaron,
+- `event == 'push'` → no es una pull request,
+- `head_branch == 'main'` → es la rama de producción.
+
+Después hace:
+
+```sh
+curl -X POST "<deploy-hook>?commit_hash=<sha-del-ci>"
+```
+
+El `commit_hash` garantiza que se despliega exactamente el commit que pasó las pruebas, no otro más reciente. La concurrencia `cd-production` evita que dos despliegues se solapen.
+
+> No renombres el workflow `CI`: el CD lo busca por ese nombre.
+
+### Comprobación de extremo a extremo
+
+1. Haz un cambio pequeño y visible (por ejemplo, el texto del footer).
+2. Ejecuta en local `php artisan test`, `vendor\bin\pint --test` y `npm run build`.
+3. Haz commit y `git push origin main`.
+4. En GitHub → **Actions**, comprueba que **CI** se ejecuta y termina en verde.
+5. Al terminar, debe aparecer automáticamente una ejecución **CD · Laravel Cloud**.
+6. En Laravel Cloud → **Deployments**, verifica que hay un despliegue nuevo con el mismo SHA.
+7. Espera a que el health check `/up` pase y abre la URL pública:
+   ```powershell
+   curl.exe -I https://tu-entorno.laravel.cloud/up
+   curl.exe -s https://tu-entorno.laravel.cloud | Select-String 'Laravel Cloud'
+   ```
+8. Confirma que el cambio visible aparece en la web.
+
+### Si algo no ocurre
+
+| Síntoma | Causa probable | Solución |
+|---|---|---|
+| No aparece ejecución CD | El CI falló o fue una PR | Corregir el CI; el CD solo va tras un push a `main` con éxito |
+| CD falla con «Falta el secreto» | Secreto no creado o mal nombrado | Crear `LARAVEL_CLOUD_DEPLOY_HOOK` |
+| El hook responde 404/401 | URL regenerada o desactivada | Volver a copiarla y actualizar el secreto |
+| Se lanzan dos despliegues | Push to deploy sigue activo | Desactivarlo en Laravel Cloud |
+| El despliegue falla en Laravel Cloud | Build, migración o health check | Revisar los logs del despliegue; CI no valida el entorno real |
+| El CD no se dispara tras renombrar | El workflow ya no se llama `CI` | Mantener el nombre o actualizar `workflows: ["CI"]` |
+
+### Seguridad del deploy hook
+
+- La URL del hook es una credencial: no se versiona ni se imprime.
+- Si se filtra, usa **Refresh** en Laravel Cloud y actualiza el secreto de GitHub.
+- El CD solo se ejecuta desde `main`, no desde pull requests ni forks.
+- Para despliegues manuales de emergencia existe el botón **Deploy** de Laravel Cloud, pero **se salta el CI**: úsalo solo para rollback o recuperación.
+
+---
+
+## 9. Health checks
 
 En **Settings → Deployments → Health checks**:
 
@@ -197,7 +331,7 @@ En **Settings → Deployments → Health checks**:
 
 ---
 
-## 9. Sembrar los 12 juegos demo (una sola vez)
+## 10. Sembrar los 12 juegos demo (una sola vez)
 
 Cuando el primer despliegue esté sano:
 
@@ -216,7 +350,7 @@ Notas:
 
 ---
 
-## 10. Crear la cuenta administradora
+## 11. Crear la cuenta administradora
 
 1. Abre `https://tu-entorno.laravel.cloud/register`.
 2. Crea tu cuenta.
@@ -229,7 +363,7 @@ El registro es **público** por decisión de producto: cualquier visitante puede
 
 ---
 
-## 11. Dominio y TLS
+## 12. Dominio y TLS
 
 1. En **Settings → Domains**, añade tu dominio (por ejemplo `gamehub.example`).
 2. Copia los registros DNS que indique Laravel Cloud en tu proveedor.
@@ -239,7 +373,7 @@ El registro es **público** por decisión de producto: cualquier visitante puede
 
 ---
 
-## 12. Backups
+## 13. Backups
 
 En **Organization → Resources → Databases → tu clúster → Backups**:
 
@@ -251,7 +385,7 @@ Los backups se restauran en un **clúster nuevo**, no sobre el actual. Para volv
 
 ---
 
-## 13. Rollback de aplicación
+## 14. Rollback de aplicación
 
 Si un despliegue falla o rompe la app:
 
@@ -263,7 +397,7 @@ Las migraciones **no** se revierten solas. Si el cambio de código depende de un
 
 ---
 
-## 14. Verificación tras publicar
+## 15. Verificación tras publicar
 
 - [ ] `GET /up` devuelve `200`.
 - [ ] `GET /games` muestra el catálogo y los 12 juegos demo.
@@ -277,7 +411,7 @@ Las migraciones **no** se revierten solas. Si el cambio de código depende de un
 
 ---
 
-## 15. Límites y decisiones a recordar
+## 16. Límites y decisiones a recordar
 
 - **Filesystem efímero:** no guardes archivos en `storage/` esperando persistencia. La app no sube imágenes; si algún día lo hace, usa Object Storage.
 - **SQLite no soportado:** no cambies `DB_CONNECTION` a `sqlite`.
@@ -289,7 +423,7 @@ Las migraciones **no** se revierten solas. Si el cambio de código depende de un
 
 ---
 
-## 16. Solución de problemas
+## 17. Solución de problemas
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
@@ -300,11 +434,11 @@ Las migraciones **no** se revierten solas. Si el cambio de código depende de un
 | Migración falla por permisos | Usuario incorrecto | Usar el usuario inyectado por Laravel Cloud |
 | Los estilos no se actualizan | Caché de assets o build antiguo | Redesplegar y forzar recarga |
 | `419 Page Expired` | `APP_KEY` cambió o cookies `secure` en HTTP | Usar HTTPS y mantener la misma `APP_KEY` |
-| El catálogo aparece vacío | Seeder no ejecutado | Ejecutar el comando del paso 9 |
+| El catálogo aparece vacío | Seeder no ejecutado | Ejecutar el comando del paso 10 |
 
 ---
 
-## 17. Comandos que NO debes ejecutar en producción
+## 18. Comandos que NO debes ejecutar en producción
 
 ```text
 php artisan migrate:fresh

@@ -182,6 +182,8 @@ routes/
   auth.php                              Login, registro y logout
   web.php                               Catálogo público / gestión autenticada
 tests/Feature/                          Suite de pruebas
+.github/workflows/ci.yml                CI: pruebas y compatibilidad MySQL
+.github/workflows/cd.yml                CD: deploy hook tras CI en verde
 ```
 
 ---
@@ -193,15 +195,35 @@ tests/Feature/                          Suite de pruebas
 - `APP_KEY` se genera por entorno con `php artisan key:generate`; nunca la compartas.
 - En producción: `APP_DEBUG=false`, cookies `secure` y sesiones/caché en base de datos.
 - El registro es público: cualquier visitante puede crear una cuenta y gestionar el catálogo. Si quieres cerrarlo, consulta `DEPLOYMENT.md`.
+- El deploy hook de Laravel Cloud se guarda como secreto de GitHub Actions; nunca se escribe en el repositorio.
 - No hay claves, tokens ni credenciales escritas en el frontend.
 
 ---
 
-## Despliegue
+## Despliegue y CI/CD
 
-El runbook completo para **Laravel Cloud + Laravel MySQL** está en [`DEPLOYMENT.md`](DEPLOYMENT.md): creación del servicio, variables, build/deploy, health checks, seed inicial, dominio, backups y rollback.
+El runbook completo para **Laravel Cloud + Laravel MySQL** está en [`DEPLOYMENT.md`](DEPLOYMENT.md): conexión con GitHub, variables, build/deploy, health checks, seed inicial, dominio, backups, rollback y CI/CD.
 
-Resumen:
+### CI (verificar)
+
+`.github/workflows/ci.yml` se ejecuta en cada push a `main`, en pull requests y manualmente:
+
+- PHPUnit sobre SQLite en memoria.
+- Job adicional sobre **MySQL 8.4** con migraciones y seed.
+- Pint y build de Vite.
+- No despliega nada.
+
+### CD (publicar)
+
+`.github/workflows/cd.yml` se dispara **solo cuando CI termina en verde** para un push a `main`:
+
+1. Comprueba que existe el secreto `LARAVEL_CLOUD_DEPLOY_HOOK`.
+2. Hace `POST` al deploy hook oficial de Laravel Cloud con el SHA exacto que pasó el CI.
+3. Laravel Cloud construye, migra, comprueba `/up` y publica con zero downtime.
+
+**Push to deploy de Laravel Cloud debe estar desactivado** para no desplegar commits que no han pasado las pruebas. El único mecanismo activo es el deploy hook, guardado como secreto de GitHub Actions.
+
+Resumen de comandos que ejecuta Laravel Cloud:
 
 ```sh
 # Build

@@ -74,7 +74,7 @@
     <footer class="border-t border-white/5 py-6">
         <div class="container-page flex flex-col items-center justify-between gap-2 text-xs text-slate-500 sm:flex-row">
             <p>© {{ date('Y') }} {{ config('app.name', 'gameLar') }} · Catálogo de videojuegos</p>
-            <p>Laravel {{ app()->version() }}</p>
+            <p>Laravel {{ app()->version() }} · Laravel Cloud</p>
         </div>
     </footer>
 </body>
