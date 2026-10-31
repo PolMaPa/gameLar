@@ -207,15 +207,17 @@ resources/views/
   layouts/app.blade.php                  Navegación por rol
 public/images/games/                     Portadas SVG locales
 scripts/generate-sample-posters.php      Generador reproducible de portadas
+deploy/provision.sh                      Aprovisionamiento del VPS Ubuntu
+deploy/deploy.sh                         Despliegue y rollback en el VPS
 routes/web.php                           Rutas públicas y de administración
 tests/Feature/                           Suite de pruebas
 .github/workflows/ci.yml                 CI: pruebas, Pint, build y MySQL 8.4
-.github/workflows/cd.yml                 CD (se sustituirá por SSH al VPS)
 Dockerfile                               Imagen multi-etapa
 docker-compose.yml                       Stack de desarrollo
 docker-compose.prod.yml                  Stack de producción
 docker/                                  Configuración de PHP-FPM y Nginx
-docs/DOCKER.md                           Guía de Docker y despliegue
+docs/DOCKER.md                           Guía de Docker local y producción
+docs/DEPLOY.md                           Runbook del VPS, HTTPS y CD por SSH
 ```
 
 ---
@@ -252,22 +254,33 @@ Hace dos trabajos en paralelo:
 
 Si cualquier test falla, el workflow se marca en rojo. Resultado en **GitHub → Actions**.
 
+Ejecuciones reales verificadas:
+
+| Commit | Motivo | Resultado |
+|---|---|---|
+| `3bba3b5` | Versión completa de la Fase 1–2 | [verde](https://github.com/PolMaPa/gameLar/actions/runs/41096344128) |
+| `efd085f` | Prueba controlada: paginación rota a propósito | [rojo](https://github.com/PolMaPa/gameLar/actions/runs/41096637458) en «Ejecutar la suite de pruebas» |
+| `3aacc51` | Revert del commit anterior | [verde](https://github.com/PolMaPa/gameLar/actions/runs/41096880156) |
+
 ---
 
 ## Despliegue (CD)
 
-**Estado actual:** el destino es un **VPS Ubuntu con Docker Compose**. El despliegue real y el CD por SSH se completarán en las fases 7–12. Todavía **no hay workflow de CD activo**: el anterior (Laravel Cloud) se ha retirado porque esa plataforma no forma parte del ejercicio.
+**Estado actual:** el destino es un **VPS Ubuntu con Docker Compose**. Todavía **no hay workflow de CD activo**: el anterior (Laravel Cloud) se retiró porque esa plataforma no forma parte del ejercicio.
+
+Ya están escritos y revisados los dos scripts que se usarán en el servidor:
+
+- `deploy/provision.sh`: instala Docker y Compose, configura UFW y crea `/opt/gamehub`.
+- `deploy/deploy.sh`: clona o actualiza el commit indicado, reconstruye imágenes, levanta los contenedores **sin borrar volúmenes**, migra, cachea y comprueba `/up`. También sirve como rollback.
 
 El futuro despliegue automático hará:
 
 1. Esperar a que CI esté en verde para `main`.
 2. Conectarse al VPS con una clave de despliegue propia.
-3. `git fetch` + `git checkout` del commit aprobado.
-4. `docker compose -f docker-compose.prod.yml up -d --build`.
-5. `php artisan migrate --force` y `php artisan optimize`.
-6. Comprobar `/up` y el estado de los contenedores.
+3. Ejecutar `deploy/deploy.sh <commit>` por SSH.
+4. Comprobar `/up` y el estado de los contenedores.
 
-El `.env.production` permanece en el VPS y los volúmenes nunca se borran.
+El `.env.production` permanece en el VPS y los volúmenes nunca se borran. Runbook completo: **[`docs/DEPLOY.md`](docs/DEPLOY.md)**.
 
 ---
 

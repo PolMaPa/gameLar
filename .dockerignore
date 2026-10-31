@@ -36,6 +36,7 @@ docker-compose*.yml
 Dockerfile
 .dockerignore
 docs
+deploy
 *.md
 
 # Tests y herramientas de desarrollo no se necesitan para servir la app
